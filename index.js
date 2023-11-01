@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 
 const fs = require("fs-extra");
+const fsPromises = require("fs").promises;
 const path = require("path");
 const minimist = require("minimist");
 const prompts = require("prompts");
 
 const templates = {
 	react: "template-reactjs",
-	"react+redux": "template-reactjs_redux",
+	"react+redux empty": "template-reactjs_redux",
+	"react+redux counter": "template-reactjs_redux-counter",
 };
 
 const argv = minimist(process.argv.slice(2));
@@ -41,21 +43,64 @@ function showNextSteps(projectPath, pkgManager = "npm") {
 }
 
 async function createProject(template, projectName) {
-	const templatePath = path.join(__dirname, templates[template]);
+	const commonTemplatePath = path.join(__dirname, templates["react"]);
+	const specificTemplatePath = path.join(__dirname, templates[template]);
 	const projectPath = path.join(process.cwd(), projectName);
 
 	try {
-		await fs.copy(templatePath, projectPath);
-		console.log(`Project created at ${projectPath}`);
+		// Copy common React template files
+		await fs.copy(commonTemplatePath, projectPath, {
+			filter: (src) => {
+				return !src.includes("node_modules");
+			},
+		});
 
+		// If the template is not the basic react one, copy its specific files
+		if (template !== "react") {
+			await fs.copy(specificTemplatePath, projectPath, {
+				filter: (src) => {
+					return !src.includes("node_modules");
+				},
+			});
+		}
+
+		updatePackageName(projectPath, projectName);
+
+		console.log(`Project created at ${projectPath}`);
 		showNextSteps(projectPath);
 	} catch (err) {
 		console.error(err);
 	}
 }
 
+async function updatePackageName(projectPath, projectName) {
+	const packageJsonPath = path.join(projectPath, "package.json");
+
+	// Read package.json
+	const packageData = await fsPromises.readFile(packageJsonPath, "utf8");
+	const packageJson = JSON.parse(packageData);
+
+	// Modify the name
+	packageJson.name = projectName;
+
+	// Write the updated data back to package.json
+	await fsPromises.writeFile(
+		packageJsonPath,
+		JSON.stringify(packageJson, null, 2),
+		"utf8"
+	);
+}
+
 function init() {
 	const questions = [];
+
+	if (!argv.n) {
+		questions.push({
+			type: "text",
+			name: "projectName",
+			message: "Enter project name",
+		});
+	}
 
 	if (!argv.t) {
 		questions.push({
@@ -63,14 +108,6 @@ function init() {
 			name: "template",
 			message: "Select a template",
 			choices: Object.keys(templates).map((t) => ({ title: t, value: t })),
-		});
-	}
-
-	if (!argv.n) {
-		questions.push({
-			type: "text",
-			name: "projectName",
-			message: "Enter project name",
 		});
 	}
 
