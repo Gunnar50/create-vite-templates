@@ -2,12 +2,10 @@
 
 const fs = require("fs-extra");
 const path = require("path");
-const readline = require("readline");
+const minimist = require("minimist");
+const prompts = require("prompts");
 
-const rl = readline.createInterface({
-	input: process.stdin,
-	output: process.stdout,
-});
+const argv = minimist(process.argv.slice(2));
 
 // Templates available
 const templates = {
@@ -15,10 +13,8 @@ const templates = {
 	"react+redux": "template-reactjs_redux",
 };
 
-// Function to create the project
-async function createProject(template) {
+async function createProject(template, projectName) {
 	const templatePath = path.join(__dirname, templates[template]);
-	const projectName = "my-new-project"; // You can make this dynamic
 	const projectPath = path.join(process.cwd(), projectName);
 
 	try {
@@ -29,31 +25,38 @@ async function createProject(template) {
 	}
 }
 
-// If a template name is provided directly
-if (process.argv[2]) {
-	const template = process.argv[2];
+async function init() {
+	let projectName = argv.n || "my-new-project";
+	let template = argv.t || null;
+
+	if (!template) {
+		const response = await prompts({
+			type: "select",
+			name: "template",
+			message: "Pick a template",
+			choices: Object.keys(templates).map((t, i) => ({ title: t, value: t })),
+		});
+
+		template = response.template;
+	}
+
+	if (!projectName) {
+		const response = await prompts({
+			type: "text",
+			name: "name",
+			message: "Project name",
+			initial: "my-new-project",
+		});
+
+		projectName = response.name;
+	}
+
 	if (!templates[template]) {
 		console.error("Template not found");
 		process.exit(1);
 	}
-	createProject(template);
-} else {
-	// Otherwise, show the user the available templates
-	console.log("Please choose a template:");
-	const templateNames = Object.keys(templates);
-	templateNames.forEach((name, index) => {
-		console.log(`${index + 1}. ${name}`);
-	});
 
-	rl.question("Your choice: ", (answer) => {
-		const index = parseInt(answer) - 1;
-		if (isNaN(index) || index < 0 || index >= templateNames.length) {
-			console.error("Invalid choice");
-			rl.close();
-			process.exit(1);
-		}
-
-		createProject(templateNames[index]);
-		rl.close();
-	});
+	createProject(template, projectName);
 }
+
+init();
