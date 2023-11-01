@@ -1,0 +1,11 @@
+{
+	"name": "create-react-app",
+	"version": "1.0.0",
+	"description": "A simple CLI tool",
+	"bin": {
+		"create-react-app": "./cli.js"
+	},
+	"dependencies": {
+		"fs-extra": "^10.0.0"
+	}
+}
