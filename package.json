@@ -1,6 +1,6 @@
 {
 	"name": "create-vite-wizzard",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "A simple CLI tool to create some templates for vite",
 	"bin": {
 		"create-vite-wizzard": "./index.js",
