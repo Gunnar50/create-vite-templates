@@ -5,13 +5,40 @@ const path = require("path");
 const minimist = require("minimist");
 const prompts = require("prompts");
 
-const argv = minimist(process.argv.slice(2));
-
-// Templates available
 const templates = {
 	react: "template-reactjs",
 	"react+redux": "template-reactjs_redux",
 };
+
+const argv = minimist(process.argv.slice(2));
+
+function showNextSteps(projectPath, pkgManager = "npm") {
+	const cwd = process.cwd(); // Current working directory
+	const root = projectPath;
+
+	const cdProjectName = path.relative(cwd, root);
+
+	console.log("\nDone. Now run:\n");
+
+	// Check if we need to cd into the project root
+	if (root !== cwd) {
+		console.log(
+			`  cd ${
+				cdProjectName.includes(" ") ? `"${cdProjectName}"` : cdProjectName
+			}`
+		);
+	}
+
+	// Display next steps based on package manager
+	switch (pkgManager) {
+		case "npm":
+			console.log("  npm install");
+			console.log("  npm run dev");
+			break;
+	}
+
+	console.log();
+}
 
 async function createProject(template, projectName) {
 	const templatePath = path.join(__dirname, templates[template]);
@@ -20,43 +47,39 @@ async function createProject(template, projectName) {
 	try {
 		await fs.copy(templatePath, projectPath);
 		console.log(`Project created at ${projectPath}`);
+
+		showNextSteps(projectPath);
 	} catch (err) {
 		console.error(err);
 	}
 }
 
-async function init() {
-	let projectName = argv.n || "my-new-project";
-	let template = argv.t || null;
+function init() {
+	const questions = [];
 
-	if (!template) {
-		const response = await prompts({
+	if (!argv.t) {
+		questions.push({
 			type: "select",
 			name: "template",
-			message: "Pick a template",
-			choices: Object.keys(templates).map((t, i) => ({ title: t, value: t })),
+			message: "Select a template",
+			choices: Object.keys(templates).map((t) => ({ title: t, value: t })),
 		});
-
-		template = response.template;
 	}
 
-	if (!projectName) {
-		const response = await prompts({
+	if (!argv.n) {
+		questions.push({
 			type: "text",
-			name: "name",
-			message: "Project name",
-			initial: "my-new-project",
+			name: "projectName",
+			message: "Enter project name",
 		});
-
-		projectName = response.name;
 	}
 
-	if (!templates[template]) {
-		console.error("Template not found");
-		process.exit(1);
+	if (questions.length > 0) {
+		prompts(questions).then((answers) => {
+			createProject(argv.t || answers.template, argv.n || answers.projectName);
+		});
+	} else {
+		createProject(argv.t, argv.n);
 	}
-
-	createProject(template, projectName);
 }
-
 init();
