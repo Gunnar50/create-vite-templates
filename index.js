@@ -63,8 +63,10 @@ async function createProject(template, projectName) {
 				},
 			});
 		}
-
-		updatePackageName(projectPath, projectName);
+		if (projectName === "") {
+			projectName = projectPath.split("\\");
+		}
+		updatePackageName(projectPath, projectName[projectName.length - 1]);
 
 		console.log(`Project created at ${projectPath}`);
 		showNextSteps(projectPath);
